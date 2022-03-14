@@ -5,6 +5,7 @@ void setup() {
     //psl stands for print static, with new line. dw about this for now, just know it prints 
     psl("Richaron has started and is working. Yay!");
     psl("Fabian was here");
+    psl("Lydia was here!");
 }
 
 void loop() {
