@@ -3,12 +3,13 @@
     by Dejan Nedelkovski, www.HowToMechatronics.com
 */
 
-#define ENA 2
-#define IN1 3
+//3, 5, 6, 9, 10, 11
+#define ENA 3
+#define IN1 2
 #define IN2 4
-#define IN3 5
+#define IN3 7
 #define IN4 6
-#define ENB 7
+#define ENB 5
 #include "helpers.h"
 
 
@@ -23,13 +24,16 @@ void setup() {
     psl("Yeet");
 }
 
+byte i = 0;
 void loop() {
     psl("Start");
-    setMotors(150);
-    delay(1000);
-    psl("Stop");
-    setMotors(0);
-    delay(1000);
+    setMotors(i);
+    putl(i);
+    if(i == 255) {
+        while(true);
+    }
+    i++;
+    delay(50);
 }
 
 //left from -256 to 256
@@ -39,8 +43,8 @@ void setMotors(int left, int right) {
 
 void setMotors(int speed) {
     if(speed > 0) {
-        digitalWrite(IN1, HIGH);
-        digitalWrite(IN2, LOW);
+        digitalWrite(IN1, LOW);
+        digitalWrite(IN2, HIGH);
         digitalWrite(IN3, HIGH);
         digitalWrite(IN4, LOW);
     } else {
