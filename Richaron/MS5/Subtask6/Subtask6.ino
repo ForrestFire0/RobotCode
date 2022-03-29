@@ -1,6 +1,6 @@
 #include <Enes100.h>
 
-//To compile you better have helpers.h. And I updated it sooooooo
+//To compile you better have helpers.h and Enes100.h. I also edited helpers.h so you need to update it.
 
 #define ENA 3
 #define IN1 2
@@ -21,9 +21,9 @@ void setup() {
     pinMode(IN4, OUTPUT);
     goTo(1,1);
     setAngle(0);
-    setAngle(PI/2);
+    setAngle(HALF_PI);
     setAngle(0);
-    setAngle(-PI/2);
+    setAngle(-HALF_PI);
     setAngle(0);
     psl("We are done lol");
 }
