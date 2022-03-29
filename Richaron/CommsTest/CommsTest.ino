@@ -6,6 +6,7 @@ void setup() {
     psl("Richaron has started and is working. Yay!");
     psl("Fabian was here");
     psl("treb is bert backwards");
+    psl("Lydia was here!");
 }
 
 void loop() {
