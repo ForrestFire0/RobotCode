@@ -14,7 +14,8 @@ and press enter.
 
 2. Open the folder (RobotCode) and the open the folder libraries.
 3. Copy the folder called helpers and slap that into `/Documents/Arduino/Libraries`
-4. Open the file `/RobotCode/Richaron/CommsTest/CommsTest.ino` in the Arduino IDE. Don't edit it quite yet, though.
+4. Install the Enes100 library from http://enes100.umd.edu/libraries/
+5. Open the file `/RobotCode/Richaron/CommsTest/CommsTest.ino` in the Arduino IDE. Don't edit it quite yet, though.
 
 ## How do I edit the code?
 
@@ -28,7 +29,7 @@ and press enter.
 
 ## How do I save my edits?
 
-1. `git add .` - this will add any new files and folders
+1. `git add .` - this will add any new changes and new files and folders
 2. `git commit -m "Summary Of Changes"` - This will take a snapshot of what the repo looks like. Change "Summary of
    changes" to an actual summary of your changes.
 3. `git push` - pushes (uploads) your code to the server.
