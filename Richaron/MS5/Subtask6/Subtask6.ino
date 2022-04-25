@@ -9,94 +9,171 @@
 #define IN4 6
 #define ENB 5
 #define ENES100_HELPERS
+#define STATE_DELAY .2
 #include "helpers.h"
 
 void setup() {
-    Enes100.begin("Richaron", DATA, 3, 8, 9);
+    Enes100.begin("Richaron", DATA, 13, 8, 9);
     pinMode(ENA, OUTPUT);
     pinMode(ENB, OUTPUT);
     pinMode(IN1, OUTPUT);
     pinMode(IN2, OUTPUT);
     pinMode(IN3, OUTPUT);
     pinMode(IN4, OUTPUT);
-    goTo(1,1);
-    setAngle(0);
-    setAngle(HALF_PI);
-    setAngle(0);
-    setAngle(-HALF_PI);
-    setAngle(0);
-    psl("We are done lol");
+
+    psl("Starting... 1 second delay");
+    delay(1000);
+    psl("Starting sequence");
+    goTo(.6, 1.85);
+    goTo(1.2, 1.84);
+    goTo(1.6, 1.84);
+    goTo(2.0, 1.84);
+    goTo(2.4, 1.83);
+    goTo(2.8, 1.4);
+    goTo(3.8, 1.4);
+    psl("Done");
 }
 
 void loop() {
+    setMotors(100, -100);
+    delay(500);
+    setMotors(-100, 100);
+    delay(500);
 }
 
-const float kP = 300;
-void setAngle(double target){
+const float kP = 100.0;
+#define MAX_TURN_SPEED 130
+void setAngle(double target) {
     ps("Targeting angle: ");
     pl(target);
     Enes100.updateLocation();
     const double thresh = 0.1;
     double *curr = &Enes100.location.theta;
-    while(abs(target - *curr) > thresh) {
+    while (abs(target - *curr) > thresh) {
+        //    while (true) {
         Enes100.updateLocation();
+        //        put(*curr);
+        //        put(target);
+        //        put(millis());
         double p = kP * (target - *curr);
-        setMotors(-p, p);
+        //        putl(p);
+        p = constrain(p, -MAX_TURN_SPEED, MAX_TURN_SPEED);
+        //        putl(p);
+        setMotors(p, -p);
     }
+    ps("Got to angle: ");
+    putl(target);
+    putl(*curr);
+    setMotors(0);
 }
 
 void goTo(double tx, double ty) {
-    double* cx = &Enes100.location.x;
-    double* cy = &Enes100.location.y;
-    double *c0 = &Enes100.location.theta;
+    Enes100.updateLocation();
+    ps("Going to x:");
+    p(tx);
+    ps(" y:");
+    pl(ty);
     double dis = 100;
-    while(dis > 0.05){ //Within 5 CM
+    double speed = 0;
+    float measuredSpeed = .5;
+    const float alpha = 0.2;
+    uint32_t last_time = millis();
+    uint32_t current_time = millis();
+    float lastTheta = Enes100.location.theta;
+    int slowCount = 0;
+    while (dis > 0.15) { //Within 5 CM
         Enes100.updateLocation();
-        dis = sqrt((tx - *cx) * (tx - *cx) + (ty - *cy) * (ty - *cy));
+        if (!sanityCheck()) {
+            psl("The system reports faulty info :(");
+            putl(Enes100.location.theta);
+            putl(Enes100.location.x);
+            putl(Enes100.location.y);
+            randomWobble();
+            delay(750);
+            continue;
+        }
+        last_time = current_time;
+        current_time = millis();
+        float new_dis = sqrt((tx - Enes100.location.x) * (tx - Enes100.location.x) + (ty - Enes100.location.y) * (ty - Enes100.location.y));
+        measuredSpeed = (.2 * ((dis - new_dis) / (current_time - last_time)) + .8 * measuredSpeed); //High alpha for buttery smooth. Speed in m/s
+        dis = new_dis;
+        putl(measuredSpeed * 1000);
+        if(measuredSpeed * 1000 < 0.5) {//2 
+            slowCount++;
+            psl("slow");
+        }
+        if(slowCount > 10) {
+            setMotors(0);
+            psl("Detected stuck. Attempting measures");
+            setMotors(-70, -200);
+            delay(200);
+            setMotors(0);
+            slowCount = 0;
+        }
         //We could go directly to a point, but we could also shoot for a point on a line.
-        float angle = atan2(ty - *cy, tx - *cx);
-        p("Current: ");
-        p(*c0);
-        p("  Target: ");
-        p(angle);
-        double speed = 3/(abs(angle - *c0));
-        if(!(speed < 200)) speed = 200; 
-        p("  Speed: ");
+        float target_angle = atan2(ty - Enes100.location.y, tx - Enes100.location.x);
+        //We are going to try to predict the robots location forward in time by extrapolating current rotational state.
+        float delta_theta = Enes100.location.theta - lastTheta;
+        lastTheta = Enes100.location.theta;
+        float current_angle = Enes100.location.theta + HALF_PI + delta_theta * STATE_DELAY;
+        if (current_angle > PI) current_angle -= 2 * PI;
+        ps("c:");
+        p(toDeg(current_angle));
+        //Our current will stay the same. It is within the range -pi/2 to 3pi/2
+        //Our target anle, however will change based on how we want to approach the thing.
+        //For example, if (assume for a second our current is -pi to pi) we are targeting
+        //.9pi and are currently at -.9 pi, we should instead try to target -1.1 pi, which is equivalent
+        //We will try to find a potential new target.
+        //Basically, we should be able to get the target within a pi of the current.
+        float delta = abs(target_angle - current_angle);
+        if (delta > PI) {
+            if (target_angle > current_angle) {
+                target_angle = target_angle - 2 * PI;
+            }
+            else {
+                target_angle = target_angle + 2 * PI;
+            }
+        }
+        p(" ft:") //fixed target;
+        p(toDeg(target_angle));
+        speed = alpha * (30 / (abs(target_angle - current_angle))) + ((1 - alpha) * speed);
+        if (!(speed < 255)) speed = 255;
+        ps(" ts: ");
         p(speed);
-        double p = kP * (angle - *c0);
-        p("  Turning: ");
-        pl(p);
-        setMotors(-p + speed, p + speed);
+        ps(" ms: ");
+        p(measuredSpeed);
+        double p = kP/2 * (target_angle - current_angle);
+        p = constrain(p, -MAX_TURN_SPEED, MAX_TURN_SPEED);
+        putl(dis);
+        setMotors(p + speed, -p + speed);
     }
 }
 
-#define LEFT_POS 0
-#define LEFT_NEG 0
-#define RIGHT_POS 0
-#define RIGHT_NEG 0
+void randomWobble() {
+    //1 second of (not) random wobble
+    #define WOBBLE_PWR 100
+    setMotors(100, 0);
+    delay(200);
+    setMotors(0, WOBBLE_PWR);
+    delay(200);
+    setMotors(WOBBLE_PWR, 0);
+    delay(200);
+    setMotors(0, WOBBLE_PWR);
+    delay(200);
+    setMotors(WOBBLE_PWR, 0);
+    delay(200);
+    setMotors(0);
+}
 
+bool sanityCheck() {
+    return Enes100.location.theta < PI * 1.1 &&
+           Enes100.location.theta > -PI * 1.1 &&
+           Enes100.location.x > -0.1 &&
+           Enes100.location.x < 4.1 &&
+           Enes100.location.y > -0.1 &&
+           Enes100.location.y < 2.1;
+}
 
-//left from -256 to 256
-void setMotors(int left, int right) {
-    if(left > 0) {
-        if(left < LEFT_POS) left = LEFT_POS;
-        digitalWrite(IN1, LOW);
-        digitalWrite(IN2, HIGH);
-    } else if(left < 0){
-        if(left > -LEFT_NEG) left = -LEFT_NEG;
-        digitalWrite(IN1, HIGH);
-        digitalWrite(IN2, LOW);
-    }
-    analogWrite(ENA, abs(left)); // Send PWM signal to motor A
-    
-    if(right > 0) {
-        if(right < RIGHT_POS) right = RIGHT_POS;
-        digitalWrite(IN3, HIGH);
-        digitalWrite(IN4, LOW);
-    } else if (right < 0) {
-        if(right > -RIGHT_NEG) right = -RIGHT_NEG;
-        digitalWrite(IN3, LOW);
-        digitalWrite(IN4, HIGH);
-    }
-    analogWrite(ENB, abs(right)); // Send PWM signal to motor B
+float toDeg(float rad) {
+    return 180.0f * rad / PI;
 }

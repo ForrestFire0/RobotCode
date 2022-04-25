@@ -1,8 +1,3 @@
-/*  Arduino DC Motor Control - PWM | H-Bridge | L298N
-         Example 02 - Arduino Robot Car Control
-    by Dejan Nedelkovski, www.HowToMechatronics.com
-*/
-
 //3, 5, 6, 9, 10, 11
 #define ENA 3
 #define IN1 2
@@ -21,16 +16,20 @@ void setup() {
     pinMode(IN2, OUTPUT);
     pinMode(IN3, OUTPUT);
     pinMode(IN4, OUTPUT);
-    psl("Yeet");
+    psl("Waiting at 0.");
+    setMotors(0);
+//    waitForKey();
 }
 
 byte i = 0;
 void loop() {
+    
     psl("Start");
     setMotors(i);
     putl(i);
     if(i == 255) {
-        while(true);
+        waitForKey();
+        reset();
     }
     i++;
     delay(50);

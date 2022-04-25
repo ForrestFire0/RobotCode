@@ -16,7 +16,7 @@ void setup() {
     pinMode(IN2, OUTPUT);
     pinMode(IN3, OUTPUT);
     pinMode(IN4, OUTPUT);
-    int rf=29,rb=29,lf=29,lb=29;
+    int rf=60,rb=60,lf=60,lb=60;
     psl("\n\n\nProgram Started\n\n\nNow testing right wheel forward\n\nPress any key when the wheel moves.");
     while(true) {
         if(Serial.available()) break;
