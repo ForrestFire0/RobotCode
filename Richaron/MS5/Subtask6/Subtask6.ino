@@ -1,4 +1,12 @@
 #include <Enes100.h>
+#include <FastLED.h>
+
+#define NUM_LEDS 6
+
+#define LED_DATA_PIN 13
+
+// Define the array of leds
+CRGB leds[NUM_LEDS];
 
 //To compile you better have helpers.h and Enes100.h. I also edited helpers.h so you need to update it.
 
@@ -13,7 +21,10 @@
 #include "helpers.h"
 
 void setup() {
+    FastLED.addLeds<WS2812B, LED_DATA_PIN, GRB>(leds, NUM_LEDS);  // GRB ordering is typical
+    leds_set(CRGB(100, 0, 0));
     Enes100.begin("Richaron", DATA, 13, 8, 9);
+
     pinMode(ENA, OUTPUT);
     pinMode(ENB, OUTPUT);
     pinMode(IN1, OUTPUT);
@@ -21,10 +32,21 @@ void setup() {
     pinMode(IN3, OUTPUT);
     pinMode(IN4, OUTPUT);
 
-    psl("Starting... 1 second delay");
-    delay(1000);
     psl("Starting sequence");
-    goTo(.6, 1.85);
+    Enes100.updateLocation();
+    while (!sanityCheck()) {
+        psl("The system reports faulty info :(");
+        putl(Enes100.location.theta);
+        putl(Enes100.location.x);
+        putl(Enes100.location.y);
+        leds_flash(10, CRGB(100, 0, 0));
+        Enes100.updateLocation();
+    }
+
+    leds_set(CRGB(50, 50, 50));
+    if (Enes100.location.x < .55)
+        goTo(.2, 1);
+    goTo(1.1, 1.84);
     goTo(1.2, 1.84);
     goTo(1.6, 1.84);
     goTo(2.0, 1.84);
@@ -36,9 +58,7 @@ void setup() {
 
 void loop() {
     setMotors(100, -100);
-    delay(500);
-    setMotors(-100, 100);
-    delay(500);
+    party(255);
 }
 
 const float kP = 100.0;
@@ -84,10 +104,10 @@ void goTo(double tx, double ty) {
     while (dis > 0.15) { //Within 5 CM
         Enes100.updateLocation();
         if (!sanityCheck()) {
-            psl("The system reports faulty info :(");
-            putl(Enes100.location.theta);
-            putl(Enes100.location.x);
-            putl(Enes100.location.y);
+            //            psl("The system reports faulty info :(");
+            //            putl(Enes100.location.theta);
+            //            putl(Enes100.location.x);
+            //            putl(Enes100.location.y);
             randomWobble();
             delay(750);
             continue;
@@ -98,16 +118,18 @@ void goTo(double tx, double ty) {
         measuredSpeed = (.2 * ((dis - new_dis) / (current_time - last_time)) + .8 * measuredSpeed); //High alpha for buttery smooth. Speed in m/s
         dis = new_dis;
         putl(measuredSpeed * 1000);
-        if(measuredSpeed * 1000 < 0.5) {//2 
+        if (measuredSpeed * 1000 < 0.1) { //2
             slowCount++;
-            psl("slow");
+            //            psl("slow");
         }
-        if(slowCount > 10) {
-            setMotors(0);
-            psl("Detected stuck. Attempting measures");
-            setMotors(-70, -200);
+        if (slowCount > 10) {
+            //            psl("Detected stuck. Attempting measures");
+            leds_set(CRGB(100, 0, 0));
+            setMotors(-200, -70);
             delay(200);
             setMotors(0);
+            delay(100);
+            leds_set(CRGB(50, 50, 50));
             slowCount = 0;
         }
         //We could go directly to a point, but we could also shoot for a point on a line.
@@ -117,8 +139,8 @@ void goTo(double tx, double ty) {
         lastTheta = Enes100.location.theta;
         float current_angle = Enes100.location.theta + HALF_PI + delta_theta * STATE_DELAY;
         if (current_angle > PI) current_angle -= 2 * PI;
-        ps("c:");
-        p(toDeg(current_angle));
+        //        ps("c:");
+        //        p(toDeg(current_angle));
         //Our current will stay the same. It is within the range -pi/2 to 3pi/2
         //Our target anle, however will change based on how we want to approach the thing.
         //For example, if (assume for a second our current is -pi to pi) we are targeting
@@ -134,25 +156,25 @@ void goTo(double tx, double ty) {
                 target_angle = target_angle + 2 * PI;
             }
         }
-        p(" ft:") //fixed target;
-        p(toDeg(target_angle));
+        //        p(" ft:") //fixed target;
+        //        p(toDeg(target_angle));
         speed = alpha * (30 / (abs(target_angle - current_angle))) + ((1 - alpha) * speed);
         if (!(speed < 255)) speed = 255;
-        ps(" ts: ");
-        p(speed);
+        //        ps(" ts: ");
+        //        p(speed);
         ps(" ms: ");
-        p(measuredSpeed);
-        double p = kP/2 * (target_angle - current_angle);
+        pl(measuredSpeed * 1000);
+        double p = kP / 2 * (target_angle - current_angle);
         p = constrain(p, -MAX_TURN_SPEED, MAX_TURN_SPEED);
-        putl(dis);
+        //        putl(dis);
         setMotors(p + speed, -p + speed);
     }
 }
 
 void randomWobble() {
     //1 second of (not) random wobble
-    #define WOBBLE_PWR 100
-    setMotors(100, 0);
+#define WOBBLE_PWR 100
+    setMotors(WOBBLE_PWR, 0);
     delay(200);
     setMotors(0, WOBBLE_PWR);
     delay(200);
