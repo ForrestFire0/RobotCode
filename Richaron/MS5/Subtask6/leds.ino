@@ -46,6 +46,7 @@ void party(byte i) {
         leds[(I + 3) % 6] = CRGB::Blue;
         leds[(I + 4) % 6] = CRGB::Purple;
         leds[(I + 5) % 6] = CRGB::Pink;
+        FastLED.setBrightness(100);
         FastLED.show();
         delay(150);
     }

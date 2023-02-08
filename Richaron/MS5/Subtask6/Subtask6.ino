@@ -21,8 +21,13 @@ CRGB leds[NUM_LEDS];
 #include "helpers.h"
 
 void setup() {
+    
     FastLED.addLeds<WS2812B, LED_DATA_PIN, GRB>(leds, NUM_LEDS);  // GRB ordering is typical
+    
     leds_set(CRGB(100, 0, 0));
+    while(true) {
+    party(255);
+    }wq
     Enes100.begin("Richaron", DATA, 13, 8, 9);
 
     pinMode(ENA, OUTPUT);
